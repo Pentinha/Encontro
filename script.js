@@ -3,14 +3,13 @@
 
   const JourneyMap = {
     config: {
-      duration: 3800, // Duração total para percorrer o caminho de 0 a 1
+      duration: 3800, 
       messages: [
         { id: 'msg1', t: 0.12 },
         { id: 'msg2', t: 0.36 },
         { id: 'msg3', t: 0.63 },
         { id: 'msg4', t: 0.86 },
       ],
-      // Pontos de parada: 0 (início), 4 mensagens, 1 (fim)
       stops: [
         { t: 0 },
         { t: 0.12, msgId: 'msg1' },
@@ -137,10 +136,9 @@
       this.state.currentStop++;
       const t1 = this.config.stops[this.state.currentStop].t;
       
-      // Calcula a duração deste segmento baseado na sua fração do total
       const segmentDuration = (t1 - t0) * this.config.duration;
       
-      this.animate(t0, t1, Math.max(300, segmentDuration)); // Garante uma duração mínima
+      this.animate(t0, t1, Math.max(300, segmentDuration));
     },
 
     animate(t0, t1, duration) {
@@ -164,7 +162,7 @@
           this.state.animFrame = requestAnimationFrame(tick);
         } else {
           this.state.playing = false;
-          this.render(t1); // Garante a posição final exata
+          this.render(t1);
           this.showCurrentMessage();
           if (t1 === 1) {
             this.revealFinal();
@@ -183,29 +181,35 @@
 
       const reveal = t * this.state.pathLength;
       this.dom.highlight.style.strokeDasharray = `${reveal} ${this.state.pathLength - reveal}`;
-      
-      // Oculta mensagens que estão "para trás"
-      this.config.messages.forEach(m => {
-        if (t < m.t - 0.05) {
-           m.el.classList.remove('show');
-           m.shown = false;
-        }
-      });
 
       const scale = 1 + Math.sin(t * Math.PI * 2) * 0.06;
       this.dom.dot.style.transform = `translate(-50%,-50%) scale(${scale})`;
     },
     
     showCurrentMessage() {
+      // *** INÍCIO DA CORREÇÃO ***
+      // Identifica qual mensagem deve ser mostrada
       const currentStopConfig = this.config.stops[this.state.currentStop];
-      if (currentStopConfig && currentStopConfig.msgId) {
-        const msgConfig = this.config.messages.find(m => m.id === currentStopConfig.msgId);
-        if (msgConfig && !msgConfig.shown) {
-          msgConfig.el.classList.add('show');
-          msgConfig.shown = true;
-          this.announce(msgConfig.el.textContent);
+      const currentMsgId = currentStopConfig ? currentStopConfig.msgId : null;
+      
+      // Itera por TODAS as mensagens
+      this.config.messages.forEach(msgConfig => {
+        // Se esta é a mensagem que queremos mostrar...
+        if (msgConfig.id === currentMsgId) {
+          if (!msgConfig.shown) { // E ela ainda não foi mostrada
+            msgConfig.el.classList.add('show');
+            msgConfig.shown = true;
+            this.announce(msgConfig.el.textContent);
+          }
+        } 
+        // Se NÃO é a mensagem que queremos mostrar...
+        else {
+          // Esconda ela!
+          msgConfig.el.classList.remove('show');
+          msgConfig.shown = false;
         }
-      }
+      });
+      // *** FIM DA CORREÇÃO ***
     },
 
     reset() {
@@ -254,7 +258,6 @@
     
     handleClickOnMap(e) {
       if (this.state.playing) return;
-      // Em vez de calcular o ponto mais próximo, apenas avançamos para a próxima parada
       this.advanceToNextStop();
     },
     
