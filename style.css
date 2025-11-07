@@ -252,7 +252,7 @@ footer{
     filter: drop-shadow(0 0 6px var(--accent-pink, #ff67d4));
 }
 
-/* --- ESTILOS PARA OS MODAIS --- */
+/* --- ESTILOS PARA O MODAL ÚNICO --- */
 
 .overlay{
   position:absolute;
@@ -261,54 +261,26 @@ footer{
   align-items:center;
   justify-content:center;
   background: rgba(10, 10, 15, 0.88);
-  /* O overlay do .card (map-wrap) tem o radius. O overlay geral não precisa */
-  /* border-radius: 1.125rem; */
   pointer-events:none;
   opacity:0;
   transition:opacity .45s ease;
   will-change: opacity;
-  z-index: 50; /* Z-index para os overlays */
+  z-index: 50;
 }
-/* O overlay do map-wrap precisa do radius */
-.map-wrap .overlay {
-  border-radius: 1.125rem;
-}
-/* O overlay da mensagem (fora do map-wrap) não precisa */
+
+/* O overlay do map-wrap (que não existe mais) */
+/* .map-wrap .overlay { border-radius: 1.125rem; } */
+
+/* O overlay da mensagem (fora do map-wrap) */
 #messageOverlay {
-  z-index: 60; /* Fica por cima do overlay final se ambos estiverem abertos */
+  z-index: 60;
+  position: fixed; /* Garante que sobreponha TUDO */
 }
 
 
 .overlay.show{ opacity:1; pointer-events:auto; }
 
-/* Card do Modal Final */
-.final-card{
-  background: #1c1c1c; 
-  border-radius: 1.125rem;
-  padding: 1.5rem;
-  text-align:center;
-  box-shadow: 0 0 1.875rem rgba(199,47,255,0.4);
-  border: 1px solid rgba(199,47,255,0.2);
-  width: 90%;
-  max-width: 400px;
-  box-sizing: border-box;
-}
-
-.final-heart-wrap {
-  font-size: 3rem; 
-  margin-bottom: 0.375rem;
-}
-.final-title {
-  font-size: 1.125rem; 
-  font-weight:700; 
-  margin-bottom: 0.5rem;
-}
-.final-desc {
-  color: var(--muted-text); 
-  margin-bottom: 1rem;
-}
-
-/* Card do Novo Modal de Mensagem */
+/* Card do Modal Único */
 .message-card {
   background: #1c1c1c; 
   border-radius: 1.125rem;
@@ -324,36 +296,31 @@ footer{
   font-size: 2.5rem;
   line-height: 1;
   margin-bottom: 0.75rem;
+  color: var(--accent-pink);
+  filter: drop-shadow(0 0 8px var(--accent-pink));
 }
 .message-text {
   font-size: 1.125rem;
+  font-weight: 700;
   color: var(--text-color);
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.5rem;
   line-height: 1.5;
 }
-
-
-.heart{
-  font-size: 2.875rem;
-  line-height:1;
-  display:inline-block;
-  transform-origin:center;
-  animation: none;
-  color: var(--accent-pink);
-  filter: drop-shadow(0 0 0.75rem var(--accent-pink));
-}
-.heart.pulse{
-  animation: pulseNeon 900ms ease-in-out infinite;
-}
-@keyframes pulseNeon{
-  0%{ transform:scale(0.92); filter:drop-shadow(0 0 0.75rem var(--accent-pink)); }
-  50%{ transform:scale(1.06); filter:drop-shadow(0 0 1.125rem #ff66e6); }
-  100%{ transform:scale(0.92); }
+.message-subtext {
+  font-size: 0.9rem;
+  color: var(--muted-text);
+  margin-bottom: 1.25rem;
+  line-height: 1.4;
+  display: none; /* Escondido por padrão */
 }
 
-#btnOk, #btnHide {
-  margin-top: 0.625rem;
+
+/* --- REMOÇÃO DOS ESTILOS ANTIGOS DO MODAL FINAL --- */
+/*
+.final-card, .final-heart-wrap, .final-title, .final-desc, .heart, .heart.pulse, @keyframes pulseNeon {
+  display: none;
 }
+*/
 
 .sr-announce {
   position: absolute;
@@ -415,26 +382,7 @@ footer{
     margin-top: 0.625rem;
   }
   
-  /* --- CORREÇÃO DEFINITIVA DO MODAL FINAL --- */
-  .final-card {
-    padding: 1.25rem 1rem;
-  }
-  .final-card .cta {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .final-heart-wrap {
-    font-size: 2.5rem;
-  }
-  .final-title {
-    font-size: 1rem;
-  }
-  .final-desc {
-    font-size: 0.875rem;
-    margin-bottom: 0.75rem;
-  }
-
-  /* --- ESTILOS DO NOVO MODAL DE MENSAGEM NO CELULAR --- */
+  /* --- ESTILOS DO MODAL ÚNICO NO CELULAR --- */
   .message-card {
     padding: 1.25rem 1rem;
   }
@@ -444,5 +392,8 @@ footer{
   }
   .message-text {
     font-size: 1rem;
+  }
+  .message-subtext {
+    font-size: 0.875rem;
   }
 }
