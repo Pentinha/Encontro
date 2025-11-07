@@ -1,19 +1,20 @@
 (function() {
-  'use strict';
+  'useAstrict';
 
   const JourneyMap = {
     config: {
       duration: 3800, 
-      // Definimos as mensagens aqui para fácil acesso no novo container
+      // Mensagens agora são um array de texto simples
       messages: [
-        { t: 0.12, text: 'Sua campanhia me alegra.' },
-        { t: 0.36, text: 'Mal posso esperar para ver o seu sorriso de perto' },
-        { t: 0.63, text: 'Quero criar nossas primeiras memórias logo.' },
-        { t: 0.86, text: 'Sinto que este é o início de tudo o que eu sempre quis' },
+        'Sua campanhia me alegra.',
+        'Mal posso esperar para ver o seu sorriso de perto',
+        'Quero criar nossas primeiras memórias logo.',
+        'Sinto que este é o início de tudo o que eu sempre quis'
       ],
+      // Stops agora usam msgIndex para pegar o texto do array
       stops: [
         { t: 0 },
-        { t: 0.12, msgIndex: 0 }, // Referência ao índice no array de messages
+        { t: 0.12, msgIndex: 0 },
         { t: 0.36, msgIndex: 1 },
         { t: 0.63, msgIndex: 2 },
         { t: 0.86, msgIndex: 3 },
@@ -42,45 +43,56 @@
     },
 
     cacheDom() {
+      // DOM do Mapa e Painel
       this.dom.svg = document.getElementById('scene');
       this.dom.path = document.getElementById('track');
       this.dom.highlight = document.getElementById('highlight');
       this.dom.dot = document.getElementById('dot');
       this.dom.glint = document.getElementById('glint');
-      this.dom.overlay = document.getElementById('overlay');
-      this.dom.finalHeart = document.getElementById('finalHeart');
+      this.dom.mapWrap = document.getElementById('mapWrap');
       this.dom.startBtn = document.getElementById('startBtn');
       this.dom.resetBtn = document.getElementById('resetBtn');
-      this.dom.btnOk = document.getElementById('btnOk');
-      this.dom.btnHide = document.getElementById('btnHide');
-      this.dom.mapWrap = document.getElementById('mapWrap');
-      this.dom.dialogTitle = document.getElementById('dialogTitle');
-      this.dom.announce = document.querySelector('.sr-announce');
       this.dom.bubbleDesc = document.getElementById('bubbleDesc');
       this.dom.hint = document.getElementById('hint');
       this.dom.footer = document.querySelector('footer');
-      // Novos elementos para o container de mensagens
-      this.dom.messageContainer = document.getElementById('messageContainer');
-      this.dom.currentMessageText = document.getElementById('currentMessageText');
+      this.dom.announce = document.querySelector('.sr-announce');
+
+      // DOM do Modal Final
+      this.dom.overlay = document.getElementById('overlay');
+      this.dom.finalHeart = document.getElementById('finalHeart');
+      this.dom.dialogTitle = document.getElementById('dialogTitle');
+      this.dom.btnOk = document.getElementById('btnOk');
+      this.dom.btnHide = document.getElementById('btnHide');
+
+      // DOM do NOVO Modal de Mensagens
+      this.dom.messageOverlay = document.getElementById('messageOverlay');
+      this.dom.messageTitle = document.getElementById('messageTitle');
+      this.dom.btnContinue = document.getElementById('btnContinue');
     },
 
     bindEvents() {
+      // Botões do Painel
       this.dom.startBtn.addEventListener('click', () => {
         this.reset();
         setTimeout(() => this.advanceToNextStop(), 60);
       });
-
       this.dom.resetBtn.addEventListener('click', () => this.reset());
+
+      // Clique no Mapa
+      this.dom.svg.addEventListener('click', (e) => this.handleClickOnMap(e));
+
+      // Botões do Modal Final
       this.dom.btnOk.addEventListener('click', () => this.hideFinal());
       this.dom.btnHide.addEventListener('click', () => this.hideFinal(true));
 
-      this.dom.svg.addEventListener('click', (e) => this.handleClickOnMap(e));
+      // Botão do NOVO Modal de Mensagens
+      this.dom.btnContinue.addEventListener('click', () => this.hideMessageModal());
 
+      // Redimensionamento da Janela
       window.addEventListener('resize', () => {
         clearTimeout(this.state.resizeTimer);
         this.state.resizeTimer = setTimeout(() => {
           this.preparePath();
-          // Não precisa mais posicionar as mensagens no mapa
         }, this.config.resizeDebounce);
       });
     },
@@ -89,7 +101,6 @@
       this.preparePath();
       this.render(0);
       this.updateUIForStop(0);
-      // Não precisa mais posicionar as mensagens no mapa
     },
 
     preparePath() {
@@ -102,16 +113,11 @@
       return this.dom.path.getPointAtLength(Math.max(0, Math.min(L, t * L)));
     },
 
-    // Removemos a função positionMessages() pois as mensagens não ficam mais no mapa.
-
     advanceToNextStop() {
       if (this.state.playing) return;
       if (this.state.currentStop >= this.config.stops.length - 1) {
         return;
       }
-
-      // Esconde a mensagem anterior antes de avançar
-      this.hideCurrentMessage();
 
       const t0 = this.config.stops[this.state.currentStop].t;
       this.state.currentStop++;
@@ -144,8 +150,12 @@
         } else {
           this.state.playing = false;
           this.render(t1);
-          this.showCurrentMessage(); // Mostra a mensagem no final do segmento
-          if (t1 === 1) {
+          
+          if (t1 < 1) {
+            // Se não for o fim, mostra o modal de mensagem
+            this.showMessageModal();
+          } else {
+            // Se for o fim (t1 = 1), mostra o modal final
             this.revealFinal();
           }
         }
@@ -167,21 +177,22 @@
       this.dom.dot.style.transform = `translate(-50%,-50%) scale(${scale})`;
     },
     
-    showCurrentMessage() {
+    showMessageModal() {
       const currentStopConfig = this.config.stops[this.state.currentStop];
       if (currentStopConfig && typeof currentStopConfig.msgIndex === 'number') {
-        const msgText = this.config.messages[currentStopConfig.msgIndex].text;
-        this.dom.currentMessageText.textContent = msgText;
-        this.dom.messageContainer.classList.add('show');
-        this.announce(msgText); // Anuncia para leitores de tela
-      } else {
-        this.hideCurrentMessage(); // Garante que esteja escondido se não houver mensagem
+        const msgText = this.config.messages[currentStopConfig.msgIndex];
+        
+        this.dom.messageTitle.textContent = msgText;
+        this.dom.messageOverlay.classList.add('show');
+        this.dom.messageOverlay.setAttribute('aria-hidden', 'false');
+        this.dom.btnContinue.focus(); // Foca no botão para acessibilidade
+        this.announce(msgText);
       }
     },
 
-    hideCurrentMessage() {
-      this.dom.messageContainer.classList.remove('show');
-      this.dom.currentMessageText.textContent = ''; // Limpa o texto
+    hideMessageModal() {
+      this.dom.messageOverlay.classList.remove('show');
+      this.dom.messageOverlay.setAttribute('aria-hidden', 'true');
     },
 
     reset() {
@@ -192,10 +203,10 @@
       this.preparePath();
       this.render(0);
 
-      this.hideCurrentMessage(); // Esconde o container de mensagens
-      this.dom.overlay.classList.remove('show');
-      this.dom.overlay.setAttribute('aria-hidden', 'true');
-      this.dom.finalHeart.classList.remove('pulse');
+      // Esconde ambos os modais
+      this.hideMessageModal();
+      this.hideFinal(true); // true para fechar imediatamente
+
       this.updateUIForStop(0);
       this.announce('');
     },
@@ -205,6 +216,7 @@
       this.dom.overlay.setAttribute('aria-hidden', 'false');
       this.dom.finalHeart.classList.add('pulse');
       this.burstParticles();
+      this.dom.btnOk.focus();
       this.announce(this.dom.dialogTitle.textContent);
       
       this.dom.hint.textContent = 'Jornada completa!';
@@ -226,7 +238,10 @@
     },
     
     handleClickOnMap(e) {
-      if (this.state.playing) return;
+      // Impede o clique se um modal estiver aberto ou se a animação estiver rodando
+      if (this.state.playing || this.dom.messageOverlay.classList.contains('show') || this.dom.overlay.classList.contains('show')) {
+        return;
+      }
       this.advanceToNextStop();
     },
     
