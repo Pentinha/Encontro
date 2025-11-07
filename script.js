@@ -59,11 +59,7 @@
     },
 
     bindEvents() {
-      this.dom.startBtn.addEventListener('click', () => {
-        this.reset();
-        this.dom.mapWrap.classList.add('journey-started');
-        setTimeout(() => this.advanceToNextStop(), 60);
-      });
+      this.dom.startBtn.addEventListener('click', () => this.startJourney());
       this.dom.resetBtn.addEventListener('click', () => this.reset());
       this.dom.svg.addEventListener('click', (e) => this.handleClickOnMap(e));
       this.dom.btnModalClose.addEventListener('click', () => this.hideMessageModal());
@@ -89,6 +85,14 @@
     pointAt(t) {
       const L = this.state.pathLength;
       return this.dom.path.getPointAtLength(Math.max(0, Math.min(L, t * L)));
+    },
+
+    startJourney() {
+      if (this.state.currentStop !== 0) {
+        this.reset();
+      }
+      this.dom.mapWrap.classList.add('journey-started');
+      setTimeout(() => this.advanceToNextStop(), 60);
     },
 
     advanceToNextStop() {
@@ -207,7 +211,12 @@
       if (this.state.playing || this.dom.messageOverlay.classList.contains('show')) {
         return;
       }
-      this.advanceToNextStop();
+      
+      if (this.state.currentStop === 0) {
+        this.startJourney();
+      } else {
+        this.advanceToNextStop();
+      }
     },
     
     updateUIForStop(stopIndex) {
