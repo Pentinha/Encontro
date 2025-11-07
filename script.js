@@ -156,14 +156,14 @@
         const progress = Math.min(1, elapsed / duration);
         const currentT = t0 + (t1 - t0) * progress;
 
-        this.render(currentT);
+        this.render(currentT); // Apenas renderiza o ponto
 
         if (progress < 1) {
           this.state.animFrame = requestAnimationFrame(tick);
         } else {
           this.state.playing = false;
           this.render(t1);
-          this.showCurrentMessage();
+          this.showCurrentMessage(); // Mostra a mensagem no final
           if (t1 === 1) {
             this.revealFinal();
           }
@@ -173,6 +173,11 @@
     },
 
     render(t) {
+      // *** INÍCIO DA CORREÇÃO ***
+      // Esta função agora SÓ renderiza o ponto e o caminho.
+      // A lógica de mostrar/esconder mensagens foi removida daqui
+      // para evitar o conflito que você viu.
+      
       const p = this.pointAt(t);
       this.dom.dot.setAttribute('cx', p.x);
       this.dom.dot.setAttribute('cy', p.y);
@@ -184,32 +189,28 @@
 
       const scale = 1 + Math.sin(t * Math.PI * 2) * 0.06;
       this.dom.dot.style.transform = `translate(-50%,-50%) scale(${scale})`;
+      // *** FIM DA CORREÇÃO ***
     },
     
     showCurrentMessage() {
-      // *** INÍCIO DA CORREÇÃO ***
-      // Identifica qual mensagem deve ser mostrada
+      // Esta função agora tem controle TOTAL e exclusivo
       const currentStopConfig = this.config.stops[this.state.currentStop];
       const currentMsgId = currentStopConfig ? currentStopConfig.msgId : null;
       
-      // Itera por TODAS as mensagens
       this.config.messages.forEach(msgConfig => {
-        // Se esta é a mensagem que queremos mostrar...
         if (msgConfig.id === currentMsgId) {
-          if (!msgConfig.shown) { // E ela ainda não foi mostrada
+          if (!msgConfig.shown) {
             msgConfig.el.classList.add('show');
             msgConfig.shown = true;
             this.announce(msgConfig.el.textContent);
           }
         } 
-        // Se NÃO é a mensagem que queremos mostrar...
         else {
-          // Esconda ela!
+          // Ela ativamente esconde todas as outras
           msgConfig.el.classList.remove('show');
           msgConfig.shown = false;
         }
       });
-      // *** FIM DA CORREÇÃO ***
     },
 
     reset() {
