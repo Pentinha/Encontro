@@ -3,12 +3,21 @@
 
   const JourneyMap = {
     config: {
-      duration: 3800,
+      duration: 3800, // Duração total para percorrer o caminho de 0 a 1
       messages: [
         { id: 'msg1', t: 0.12 },
         { id: 'msg2', t: 0.36 },
         { id: 'msg3', t: 0.63 },
         { id: 'msg4', t: 0.86 },
+      ],
+      // Pontos de parada: 0 (início), 4 mensagens, 1 (fim)
+      stops: [
+        { t: 0 },
+        { t: 0.12, msgId: 'msg1' },
+        { t: 0.36, msgId: 'msg2' },
+        { t: 0.63, msgId: 'msg3' },
+        { t: 0.86, msgId: 'msg4' },
+        { t: 1 }
       ],
       particleCount: 18,
       resizeDebounce: 150,
@@ -21,6 +30,7 @@
       startTime: null,
       playing: false,
       resizeTimer: null,
+      currentStop: 0,
     },
 
     init() {
@@ -46,6 +56,9 @@
       this.dom.mapWrap = document.getElementById('mapWrap');
       this.dom.dialogTitle = document.getElementById('dialogTitle');
       this.dom.announce = document.querySelector('.sr-announce');
+      this.dom.bubbleDesc = document.getElementById('bubbleDesc');
+      this.dom.hint = document.getElementById('hint');
+      this.dom.footer = document.querySelector('footer');
       
       this.config.messages = this.config.messages.map(msg => ({
         ...msg,
@@ -57,7 +70,7 @@
     bindEvents() {
       this.dom.startBtn.addEventListener('click', () => {
         this.reset();
-        setTimeout(() => this.animate(0, 1, this.config.duration), 60);
+        setTimeout(() => this.advanceToNextStop(), 60);
       });
 
       this.dom.resetBtn.addEventListener('click', () => this.reset());
@@ -78,6 +91,7 @@
     prepareScene() {
       this.preparePath();
       this.render(0);
+      this.updateUIForStop(0);
       setTimeout(() => this.positionMessages(), 80);
     },
 
@@ -113,11 +127,28 @@
       });
     },
 
+    advanceToNextStop() {
+      if (this.state.playing) return;
+      if (this.state.currentStop >= this.config.stops.length - 1) {
+        return;
+      }
+
+      const t0 = this.config.stops[this.state.currentStop].t;
+      this.state.currentStop++;
+      const t1 = this.config.stops[this.state.currentStop].t;
+      
+      // Calcula a duração deste segmento baseado na sua fração do total
+      const segmentDuration = (t1 - t0) * this.config.duration;
+      
+      this.animate(t0, t1, Math.max(300, segmentDuration)); // Garante uma duração mínima
+    },
+
     animate(t0, t1, duration) {
       if (this.state.playing) return;
       
       this.state.playing = true;
       this.state.startTime = null;
+      this.updateUIForStop(this.state.currentStop);
 
       const tick = (now) => {
         if (!this.state.playing) return;
@@ -133,7 +164,11 @@
           this.state.animFrame = requestAnimationFrame(tick);
         } else {
           this.state.playing = false;
-          this.revealFinal();
+          this.render(t1); // Garante a posição final exata
+          this.showCurrentMessage();
+          if (t1 === 1) {
+            this.revealFinal();
+          }
         }
       };
       this.state.animFrame = requestAnimationFrame(tick);
@@ -148,22 +183,35 @@
 
       const reveal = t * this.state.pathLength;
       this.dom.highlight.style.strokeDasharray = `${reveal} ${this.state.pathLength - reveal}`;
-
+      
+      // Oculta mensagens que estão "para trás"
       this.config.messages.forEach(m => {
-        if (t >= m.t - 0.05 && !m.shown) {
-          m.el.classList.add('show');
-          m.shown = true;
-          this.announce(m.el.textContent);
+        if (t < m.t - 0.05) {
+           m.el.classList.remove('show');
+           m.shown = false;
         }
       });
 
       const scale = 1 + Math.sin(t * Math.PI * 2) * 0.06;
       this.dom.dot.style.transform = `translate(-50%,-50%) scale(${scale})`;
     },
+    
+    showCurrentMessage() {
+      const currentStopConfig = this.config.stops[this.state.currentStop];
+      if (currentStopConfig && currentStopConfig.msgId) {
+        const msgConfig = this.config.messages.find(m => m.id === currentStopConfig.msgId);
+        if (msgConfig && !msgConfig.shown) {
+          msgConfig.el.classList.add('show');
+          msgConfig.shown = true;
+          this.announce(msgConfig.el.textContent);
+        }
+      }
+    },
 
     reset() {
       if (this.state.animFrame) cancelAnimationFrame(this.state.animFrame);
       this.state.playing = false;
+      this.state.currentStop = 0;
 
       this.preparePath();
       this.render(0);
@@ -175,6 +223,7 @@
       this.dom.overlay.classList.remove('show');
       this.dom.overlay.setAttribute('aria-hidden', 'true');
       this.dom.finalHeart.classList.remove('pulse');
+      this.updateUIForStop(0);
       this.announce('');
     },
 
@@ -184,6 +233,8 @@
       this.dom.finalHeart.classList.add('pulse');
       this.burstParticles();
       this.announce(this.dom.dialogTitle.textContent);
+      
+      this.dom.hint.textContent = 'Jornada completa!';
     },
 
     hideFinal(immediate = false) {
@@ -203,32 +254,24 @@
     
     handleClickOnMap(e) {
       if (this.state.playing) return;
-      this.reset();
-
-      const pt = this.dom.svg.createSVGPoint();
-      pt.x = e.clientX;
-      pt.y = e.clientY;
-      const loc = pt.matrixTransform(this.dom.svg.getScreenCTM().inverse());
-      const L = this.state.pathLength;
-
-      let bestT = 0, bestDist = Infinity;
-      const samples = 120;
-      for (let i = 0; i <= samples; i++) {
-        const t = i / samples;
-        const p = this.dom.path.getPointAtLength(t * L);
-        const dx = p.x - loc.x, dy = p.y - loc.y;
-        const d = dx * dx + dy * dy;
-        if (d < bestDist) {
-          bestDist = d;
-          bestT = t;
-        }
+      // Em vez de calcular o ponto mais próximo, apenas avançamos para a próxima parada
+      this.advanceToNextStop();
+    },
+    
+    updateUIForStop(stopIndex) {
+      if (stopIndex === 0) {
+        this.dom.bubbleDesc.textContent = 'Clique em "Começar" e depois clique no mapa para avançar por cada etapa da jornada.';
+        this.dom.hint.textContent = 'Dica: Clique em começar a jornada você vai gostar.';
+        this.dom.footer.textContent = 'Toque/click no mapa para iniciar também.';
+        this.dom.startBtn.style.display = 'flex';
+        this.dom.resetBtn.style.display = 'flex';
+      } else {
+        this.dom.bubbleDesc.textContent = 'Clique no mapa para continuar a jornada e revelar a próxima mensagem.';
+        this.dom.hint.textContent = 'Clique no mapa para avançar.';
+        this.dom.footer.textContent = 'Toque/click no mapa para avançar.';
+        this.dom.startBtn.style.display = 'none';
+        this.dom.resetBtn.style.display = 'flex';
       }
-      
-      this.render(bestT);
-
-      const remainingFrac = 1 - bestT;
-      const customDuration = Math.max(1000, this.config.duration * remainingFrac);
-      this.animate(bestT, 1, customDuration);
     },
 
     burstParticles() {
