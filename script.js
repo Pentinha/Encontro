@@ -4,7 +4,6 @@
   const JourneyMap = {
     config: {
       duration: 3800, 
-      // Array de mensagens unificado (título + subtítulo)
       messages: [
         { title: 'Sua campanhia me alegra.', sub: null },
         { title: 'Mal posso esperar para ver o seu sorriso de perto', sub: null },
@@ -12,14 +11,13 @@
         { title: 'Sinto que este é o início de tudo o que eu sempre quis', sub: null },
         { title: 'Nosso encontro começa aqui', sub: 'Mal posso esperar para te conhecer mais.' }
       ],
-      // Stops agora usam msgIndex para pegar a mensagem
       stops: [
         { t: 0 },
         { t: 0.12, msgIndex: 0 },
         { t: 0.36, msgIndex: 1 },
         { t: 0.63, msgIndex: 2 },
         { t: 0.86, msgIndex: 3 },
-        { t: 1, msgIndex: 4 } // Ponto final agora chama a 5ª mensagem (index 4)
+        { t: 1, msgIndex: 4 }
       ],
       particleCount: 18,
       resizeDebounce: 150,
@@ -53,7 +51,7 @@
       this.dom.mapWrap = document.getElementById('mapWrap');
       this.dom.startBtn = document.getElementById('startBtn');
       this.dom.resetBtn = document.getElementById('resetBtn');
-      this.dom.bubbleDesc = document.getElementById('bubbleDesc');
+      // this.dom.bubbleDesc = document.getElementById('bubbleDesc'); // REMOVIDO
       this.dom.hint = document.getElementById('hint');
       this.dom.footer = document.querySelector('footer');
       this.dom.announce = document.querySelector('.sr-announce');
@@ -69,6 +67,7 @@
       // Botões do Painel
       this.dom.startBtn.addEventListener('click', () => {
         this.reset();
+        this.dom.mapWrap.classList.add('journey-started'); // Adiciona classe p/ parar brilho
         setTimeout(() => this.advanceToNextStop(), 60);
       });
       this.dom.resetBtn.addEventListener('click', () => this.reset());
@@ -106,7 +105,6 @@
 
     advanceToNextStop() {
       if (this.state.playing) return;
-      // Não avança se o último stop já foi atingido
       if (this.state.currentStop >= this.config.stops.length - 1) {
         return;
       }
@@ -143,10 +141,8 @@
           this.state.playing = false;
           this.render(t1);
           
-          // Lógica unificada: Sempre mostra o modal da etapa atual
           this.showMessageModal(); 
 
-          // Se for o fim (t1 = 1), faz as partículas e atualiza a UI
           if (t1 === 1) {
             this.burstParticles();
             this.dom.hint.textContent = 'Jornada completa!';
@@ -176,7 +172,6 @@
         const msgIndex = currentStopConfig.msgIndex;
         const msg = this.config.messages[msgIndex];
         
-        // Define o conteúdo do modal
         this.dom.messageTitle.textContent = msg.title;
 
         if (msg.sub) {
@@ -187,14 +182,12 @@
           this.dom.messageSubtitle.style.display = 'none';
         }
 
-        // Define o texto do botão
         if (msgIndex === this.config.messages.length - 1) {
           this.dom.btnModalClose.textContent = 'Sorrir 😊';
         } else {
           this.dom.btnModalClose.textContent = 'Continuar';
         }
         
-        // Exibe o modal
         this.dom.messageOverlay.classList.add('show');
         this.dom.messageOverlay.setAttribute('aria-hidden', 'false');
         this.dom.btnModalClose.focus();
@@ -216,14 +209,14 @@
       this.render(0);
 
       this.hideMessageModal();
-      this.dom.btnModalClose.textContent = 'Continuar'; // Reseta o botão
+      this.dom.btnModalClose.textContent = 'Continuar'; 
+      this.dom.mapWrap.classList.remove('journey-started'); // Remove classe p/ brilho voltar
 
       this.updateUIForStop(0);
       this.announce('');
     },
     
     handleClickOnMap(e) {
-      // Impede o clique se a animação estiver rodando ou o modal estiver aberto
       if (this.state.playing || this.dom.messageOverlay.classList.contains('show')) {
         return;
       }
@@ -231,14 +224,15 @@
     },
     
     updateUIForStop(stopIndex) {
+      // Atualiza a Dica com base na etapa
       if (stopIndex === 0) {
-        this.dom.bubbleDesc.textContent = 'Clique em "Começar" e depois clique no mapa para avançar por cada etapa da jornada.';
-        this.dom.hint.textContent = 'Dica: Clique em começar a jornada você vai gostar.';
+        // this.dom.bubbleDesc.textContent = '...'; // REMOVIDO
+        this.dom.hint.textContent = 'Dica: Clique em "Começar" e depois no mapa para avançar.';
         this.dom.footer.textContent = 'Toque/click no mapa para iniciar também.';
         this.dom.startBtn.style.display = 'flex';
         this.dom.resetBtn.style.display = 'flex';
       } else {
-        this.dom.bubbleDesc.textContent = 'Clique no mapa para continuar a jornada e revelar a próxima mensagem.';
+        // this.dom.bubbleDesc.textContent = '...'; // REMOVIDO
         this.dom.hint.textContent = 'Clique no mapa para avançar.';
         this.dom.footer.textContent = 'Toque/click no mapa para avançar.';
         this.dom.startBtn.style.display = 'none';
