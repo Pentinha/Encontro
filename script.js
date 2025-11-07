@@ -42,7 +42,6 @@
     },
 
     cacheDom() {
-      // DOM do Mapa e Painel
       this.dom.svg = document.getElementById('scene');
       this.dom.path = document.getElementById('track');
       this.dom.highlight = document.getElementById('highlight');
@@ -51,12 +50,8 @@
       this.dom.mapWrap = document.getElementById('mapWrap');
       this.dom.startBtn = document.getElementById('startBtn');
       this.dom.resetBtn = document.getElementById('resetBtn');
-      // this.dom.bubbleDesc = document.getElementById('bubbleDesc'); // REMOVIDO
       this.dom.hint = document.getElementById('hint');
-      this.dom.footer = document.querySelector('footer');
       this.dom.announce = document.querySelector('.sr-announce');
-
-      // DOM do Modal ÚNICO
       this.dom.messageOverlay = document.getElementById('messageOverlay');
       this.dom.messageTitle = document.getElementById('messageTitle');
       this.dom.messageSubtitle = document.getElementById('messageSubtitle');
@@ -64,21 +59,14 @@
     },
 
     bindEvents() {
-      // Botões do Painel
       this.dom.startBtn.addEventListener('click', () => {
         this.reset();
-        this.dom.mapWrap.classList.add('journey-started'); // Adiciona classe p/ parar brilho
+        this.dom.mapWrap.classList.add('journey-started');
         setTimeout(() => this.advanceToNextStop(), 60);
       });
       this.dom.resetBtn.addEventListener('click', () => this.reset());
-
-      // Clique no Mapa
       this.dom.svg.addEventListener('click', (e) => this.handleClickOnMap(e));
-
-      // Botão do Modal ÚNICO
       this.dom.btnModalClose.addEventListener('click', () => this.hideMessageModal());
-
-      // Redimensionamento da Janela
       window.addEventListener('resize', () => {
         clearTimeout(this.state.resizeTimer);
         this.state.resizeTimer = setTimeout(() => {
@@ -140,7 +128,6 @@
         } else {
           this.state.playing = false;
           this.render(t1);
-          
           this.showMessageModal(); 
 
           if (t1 === 1) {
@@ -210,7 +197,7 @@
 
       this.hideMessageModal();
       this.dom.btnModalClose.textContent = 'Continuar'; 
-      this.dom.mapWrap.classList.remove('journey-started'); // Remove classe p/ brilho voltar
+      this.dom.mapWrap.classList.remove('journey-started');
 
       this.updateUIForStop(0);
       this.announce('');
@@ -224,17 +211,12 @@
     },
     
     updateUIForStop(stopIndex) {
-      // Atualiza a Dica com base na etapa
       if (stopIndex === 0) {
-        // this.dom.bubbleDesc.textContent = '...'; // REMOVIDO
         this.dom.hint.textContent = 'Dica: Clique em "Começar" e depois no mapa para avançar.';
-        this.dom.footer.textContent = 'Toque/click no mapa para iniciar também.';
         this.dom.startBtn.style.display = 'flex';
         this.dom.resetBtn.style.display = 'flex';
       } else {
-        // this.dom.bubbleDesc.textContent = '...'; // REMOVIDO
         this.dom.hint.textContent = 'Clique no mapa para avançar.';
-        this.dom.footer.textContent = 'Toque/click no mapa para avançar.';
         this.dom.startBtn.style.display = 'none';
         this.dom.resetBtn.style.display = 'flex';
       }
