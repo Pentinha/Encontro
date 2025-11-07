@@ -67,10 +67,6 @@
           </g>
 
         </svg>
-
-        <div id="messageContainer" class="message-container">
-          <p id="currentMessageText"></p>
-        </div>
         
         <div class="sr-announce" aria-live="polite" aria-atomic="true"></div>
 
@@ -105,10 +101,16 @@
 
         <footer>Toque/click no mapa para avançar.</footer>
       </div>
+    </div> <div class="overlay" id="messageOverlay" role="dialog" aria-hidden="true" aria-labelledby="messageTitle">
+      <div class="message-card">
+        <div class="message-icon">💬</div>
+        <div id="messageTitle" class="message-text"></div>
+        <div class="cta">
+          <button class="btn" id="btnContinue">Continuar</button>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
 
-<script src="script.js"></script>
+  </div> </div> <script src="script.js"></script>
 </body>
 </html>
