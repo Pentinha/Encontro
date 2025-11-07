@@ -20,7 +20,7 @@
 
     <div class="stage">
       <div class="map-wrap" id="mapWrap">
-        <svg class="scene" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet" id="scene" aria-hidden="false">
+        <svg class="scene" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet" id="scene" role="img" aria-label="Mapa da jornada interativa">
           <defs>
             <linearGradient id="grad" x1="0" x2="1">
               <stop offset="0%" stop-color="#ffb8d2"/>
@@ -52,7 +52,7 @@
                 C740,360 820,300 920,220" stroke-linejoin="round" stroke-linecap="round"/>
 
           <circle id="m1" class="mark" cx="170" cy="320" r="6"></circle>
-          <circle id="m2" class="mark" cx="360" cy="240" r="6"></circle>
+          <circle id="m2" class"mark" cx="360" cy="240" r="6"></circle>
           <circle id="m3" class="mark" cx="540" cy="300" r="6"></circle>
           <circle id="m4" class="mark" cx="760" cy="330" r="6"></circle>
 
@@ -68,33 +68,32 @@
 
         </svg>
 
-        <img src="" class="petal" id="petal1" style="left:10%; top:6%; opacity:0.9;" aria-hidden="true">
-        <img src="" class="petal" id="petal2" style="left:80%; top:12%; opacity:0.7;" aria-hidden="true">
         <div class="along-msg" id="msg1">Sua campanhia me alegra.</div>
         <div class="along-msg" id="msg2">Mal posso esperar para ver o seu sorriso de perto</div>
         <div class="along-msg" id="msg3">Quero criar nossas primeiras memórias logo.</div>
         <div class="along-msg" id="msg4">Sinto que este é o início de tudo o que eu sempre quis</div>
+        
+        <div class="sr-announce" aria-live="polite" aria-atomic="true"></div>
 
-        <div class="overlay" id="overlay" role="dialog" aria-hidden="true">
+        <div class="overlay" id="overlay" role="dialog" aria-hidden="true" aria-labelledby="dialogTitle" aria-describedby="dialogDesc">
           <div class="final-card" id="finalCard">
-            <div style="font-size:48px; margin-bottom:6px;">
+            <div class="final-heart-wrap">
               <span class="heart" id="finalHeart">❤</span>
             </div>
-            <div style="font-size:18px; font-weight:700; margin-bottom:8px;">Nosso primeiro encontro começa aqui</div>
-            <div style="color:var(--muted); margin-bottom:16px;">Mal posso esperar para te conhecer mais.</div>
+            <div id="dialogTitle" class="final-title">Nosso primeiro encontro começa aqui</div>
+            <div id="dialogDesc" class="final-desc">Mal posso esperar para te conhecer mais.</div>
             <div class="cta">
               <button class="btn" id="btnOk">Sorrir 😊</button>
               <button class="btn ghost" id="btnHide">Fechar</button>
             </div>
           </div>
         </div>
-
       </div>
 
       <div class="panel">
         <div class="bubble">
           <strong>Como funciona</strong>
-          <div style="margin-top:8px; color:var(--muted); font-size:14px;">
+          <div class="bubble-desc">
             Clique no mapa para iniciar a pequena jornada. Um pontinho luminoso vai seguir o caminho .</div>
         </div>
 
