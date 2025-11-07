@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Nosso primeiro encontro começa aqui</title>
+<link rel="stylesheet" href="style.css"> 
+</head>
+<body>
+<div class="wrap">
+  <div class="card" role="main" aria-labelledby="title">
+
+    <header>
+      <div class="logo">❤️</div>
+      <div>
+        <h1 id="title">Nosso primeiro encontro começa aqui</h1>
+        <p class="lead">Um caminho bonito, algumas palavras e um coração no final, isso só para te ver sorrir.</p>
+      </div>
+    </header>
+
+    <div class="stage">
+      <div class="map-wrap" id="mapWrap">
+        <svg class="scene" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet" id="scene" aria-hidden="false">
+          <defs>
+            <linearGradient id="grad" x1="0" x2="1">
+              <stop offset="0%" stop-color="#ffb8d2"/>
+              <stop offset="100%" stop-color="#ff6fa3"/>
+            </linearGradient>
+
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+
+          <g transform="translate(0,80)">
+            <path d="M0,420 C180,320 300,380 500,360 C700,340 820,300 1000,380 L1000,600 L0,600 Z"
+                  fill="#fff0f7" opacity="0.9"></path>
+          </g>
+
+          <path id="track" class="path-stroke" d="M80,420
+                C160,300 240,240 360,240
+                C500,240 520,360 620,360
+                C740,360 820,300 920,220" />
+
+          <path id="highlight" class="path-highlight" d="M80,420
+                C160,300 240,240 360,240
+                C500,240 520,360 620,360
+                C740,360 820,300 920,220" stroke-linejoin="round" stroke-linecap="round"/>
+
+          <circle id="m1" class="mark" cx="170" cy="320" r="6"></circle>
+          <circle id="m2" class="mark" cx="360" cy="240" r="6"></circle>
+          <circle id="m3" class="mark" cx="540" cy="300" r="6"></circle>
+          <circle id="m4" class="mark" cx="760" cy="330" r="6"></circle>
+
+          <g id="heartGroup" transform="translate(910,200) scale(1)">
+            <path id="heart" d="M24 4c-4-3-10-1-12.5 2.5C8 3 2 1 0 4-3 8 1 14 12 24 23 14 27 8 24 4z"
+                  fill="#ff6fa3" transform="translate(-24,-16) scale(1.9)" opacity="0.95" />
+          </g>
+
+          <g id="dotGroup">
+            <circle id="dot" class="dot" cx="80" cy="420" r="7"></circle>
+            <circle id="glint" cx="76" cy="416" r="3" fill="#fff" opacity="0.9"></circle>
+          </g>
+
+        </svg>
+
+        <img src="" class="petal" id="petal1" style="left:10%; top:6%; opacity:0.9;" aria-hidden="true">
+        <img src="" class="petal" id="petal2" style="left:80%; top:12%; opacity:0.7;" aria-hidden="true">
+        <div class="along-msg" id="msg1">Sua campanhia me alegra.</div>
+        <div class="along-msg" id="msg2">Mal posso esperar para ver o seu sorriso de perto</div>
+        <div class="along-msg" id="msg3">Quero criar nossas primeiras memórias logo.</div>
+        <div class="along-msg" id="msg4">Sinto que este é o início de tudo o que eu sempre quis</div>
+
+        <div class="overlay" id="overlay" role="dialog" aria-hidden="true">
+          <div class="final-card" id="finalCard">
+            <div style="font-size:48px; margin-bottom:6px;">
+              <span class="heart" id="finalHeart">❤</span>
+            </div>
+            <div style="font-size:18px; font-weight:700; margin-bottom:8px;">Nosso primeiro encontro começa aqui</div>
+            <div style="color:var(--muted); margin-bottom:16px;">Mal posso esperar para te conhecer mais.</div>
+            <div class="cta">
+              <button class="btn" id="btnOk">Sorrir 😊</button>
+              <button class="btn ghost" id="btnHide">Fechar</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="panel">
+        <div class="bubble">
+          <strong>Como funciona</strong>
+          <div style="margin-top:8px; color:var(--muted); font-size:14px;">
+            Clique no mapa para iniciar a pequena jornada. Um pontinho luminoso vai seguir o caminho .</div>
+        </div>
+
+        <div class="bubble hint" id="hint">Dica: Clique em começar a jornada você vai gostar .</div>
+
+        <div class="cta">
+          <button class="btn" id="startBtn" aria-label="Iniciar jornada">Começar a jornada</button>
+          <button class="btn ghost" id="resetBtn" aria-label="Reiniciar">Reiniciar</button>
+        </div>
+
+        <footer>Toque/click no mapa para iniciar também.</footer>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
