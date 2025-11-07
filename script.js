@@ -1,24 +1,25 @@
 (function() {
-  'useAstrict';
+  'use strict';
 
   const JourneyMap = {
     config: {
       duration: 3800, 
-      // Mensagens agora são um array de texto simples
+      // Array de mensagens unificado (título + subtítulo)
       messages: [
-        'Sua campanhia me alegra.',
-        'Mal posso esperar para ver o seu sorriso de perto',
-        'Quero criar nossas primeiras memórias logo.',
-        'Sinto que este é o início de tudo o que eu sempre quis'
+        { title: 'Sua campanhia me alegra.', sub: null },
+        { title: 'Mal posso esperar para ver o seu sorriso de perto', sub: null },
+        { title: 'Quero criar nossas primeiras memórias logo.', sub: null },
+        { title: 'Sinto que este é o início de tudo o que eu sempre quis', sub: null },
+        { title: 'Nosso encontro começa aqui', sub: 'Mal posso esperar para te conhecer mais.' }
       ],
-      // Stops agora usam msgIndex para pegar o texto do array
+      // Stops agora usam msgIndex para pegar a mensagem
       stops: [
         { t: 0 },
         { t: 0.12, msgIndex: 0 },
         { t: 0.36, msgIndex: 1 },
         { t: 0.63, msgIndex: 2 },
         { t: 0.86, msgIndex: 3 },
-        { t: 1 }
+        { t: 1, msgIndex: 4 } // Ponto final agora chama a 5ª mensagem (index 4)
       ],
       particleCount: 18,
       resizeDebounce: 150,
@@ -57,17 +58,11 @@
       this.dom.footer = document.querySelector('footer');
       this.dom.announce = document.querySelector('.sr-announce');
 
-      // DOM do Modal Final
-      this.dom.overlay = document.getElementById('overlay');
-      this.dom.finalHeart = document.getElementById('finalHeart');
-      this.dom.dialogTitle = document.getElementById('dialogTitle');
-      this.dom.btnOk = document.getElementById('btnOk');
-      this.dom.btnHide = document.getElementById('btnHide');
-
-      // DOM do NOVO Modal de Mensagens
+      // DOM do Modal ÚNICO
       this.dom.messageOverlay = document.getElementById('messageOverlay');
       this.dom.messageTitle = document.getElementById('messageTitle');
-      this.dom.btnContinue = document.getElementById('btnContinue');
+      this.dom.messageSubtitle = document.getElementById('messageSubtitle');
+      this.dom.btnModalClose = document.getElementById('btnModalClose');
     },
 
     bindEvents() {
@@ -81,12 +76,8 @@
       // Clique no Mapa
       this.dom.svg.addEventListener('click', (e) => this.handleClickOnMap(e));
 
-      // Botões do Modal Final
-      this.dom.btnOk.addEventListener('click', () => this.hideFinal());
-      this.dom.btnHide.addEventListener('click', () => this.hideFinal(true));
-
-      // Botão do NOVO Modal de Mensagens
-      this.dom.btnContinue.addEventListener('click', () => this.hideMessageModal());
+      // Botão do Modal ÚNICO
+      this.dom.btnModalClose.addEventListener('click', () => this.hideMessageModal());
 
       // Redimensionamento da Janela
       window.addEventListener('resize', () => {
@@ -115,6 +106,7 @@
 
     advanceToNextStop() {
       if (this.state.playing) return;
+      // Não avança se o último stop já foi atingido
       if (this.state.currentStop >= this.config.stops.length - 1) {
         return;
       }
@@ -151,12 +143,13 @@
           this.state.playing = false;
           this.render(t1);
           
-          if (t1 < 1) {
-            // Se não for o fim, mostra o modal de mensagem
-            this.showMessageModal();
-          } else {
-            // Se for o fim (t1 = 1), mostra o modal final
-            this.revealFinal();
+          // Lógica unificada: Sempre mostra o modal da etapa atual
+          this.showMessageModal(); 
+
+          // Se for o fim (t1 = 1), faz as partículas e atualiza a UI
+          if (t1 === 1) {
+            this.burstParticles();
+            this.dom.hint.textContent = 'Jornada completa!';
           }
         }
       };
@@ -180,13 +173,32 @@
     showMessageModal() {
       const currentStopConfig = this.config.stops[this.state.currentStop];
       if (currentStopConfig && typeof currentStopConfig.msgIndex === 'number') {
-        const msgText = this.config.messages[currentStopConfig.msgIndex];
+        const msgIndex = currentStopConfig.msgIndex;
+        const msg = this.config.messages[msgIndex];
         
-        this.dom.messageTitle.textContent = msgText;
+        // Define o conteúdo do modal
+        this.dom.messageTitle.textContent = msg.title;
+
+        if (msg.sub) {
+          this.dom.messageSubtitle.textContent = msg.sub;
+          this.dom.messageSubtitle.style.display = 'block';
+        } else {
+          this.dom.messageSubtitle.textContent = '';
+          this.dom.messageSubtitle.style.display = 'none';
+        }
+
+        // Define o texto do botão
+        if (msgIndex === this.config.messages.length - 1) {
+          this.dom.btnModalClose.textContent = 'Sorrir 😊';
+        } else {
+          this.dom.btnModalClose.textContent = 'Continuar';
+        }
+        
+        // Exibe o modal
         this.dom.messageOverlay.classList.add('show');
         this.dom.messageOverlay.setAttribute('aria-hidden', 'false');
-        this.dom.btnContinue.focus(); // Foca no botão para acessibilidade
-        this.announce(msgText);
+        this.dom.btnModalClose.focus();
+        this.announce(msg.title + (msg.sub || ''));
       }
     },
 
@@ -203,43 +215,16 @@
       this.preparePath();
       this.render(0);
 
-      // Esconde ambos os modais
       this.hideMessageModal();
-      this.hideFinal(true); // true para fechar imediatamente
+      this.dom.btnModalClose.textContent = 'Continuar'; // Reseta o botão
 
       this.updateUIForStop(0);
       this.announce('');
     },
-
-    revealFinal() {
-      this.dom.overlay.classList.add('show');
-      this.dom.overlay.setAttribute('aria-hidden', 'false');
-      this.dom.finalHeart.classList.add('pulse');
-      this.burstParticles();
-      this.dom.btnOk.focus();
-      this.announce(this.dom.dialogTitle.textContent);
-      
-      this.dom.hint.textContent = 'Jornada completa!';
-    },
-
-    hideFinal(immediate = false) {
-      this.dom.finalHeart.classList.remove('pulse');
-      if (!immediate) {
-        this.dom.finalHeart.style.transform = 'scale(1.05)';
-        setTimeout(() => {
-          this.dom.overlay.classList.remove('show');
-          this.dom.overlay.setAttribute('aria-hidden', 'true');
-          this.dom.finalHeart.style.transform = 'scale(1)';
-        }, 600);
-      } else {
-        this.dom.overlay.classList.remove('show');
-        this.dom.overlay.setAttribute('aria-hidden', 'true');
-      }
-    },
     
     handleClickOnMap(e) {
-      // Impede o clique se um modal estiver aberto ou se a animação estiver rodando
-      if (this.state.playing || this.dom.messageOverlay.classList.contains('show') || this.dom.overlay.classList.contains('show')) {
+      // Impede o clique se a animação estiver rodando ou o modal estiver aberto
+      if (this.state.playing || this.dom.messageOverlay.classList.contains('show')) {
         return;
       }
       this.advanceToNextStop();
