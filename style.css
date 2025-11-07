@@ -268,10 +268,6 @@ footer{
   z-index: 50;
 }
 
-/* O overlay do map-wrap (que não existe mais) */
-/* .map-wrap .overlay { border-radius: 1.125rem; } */
-
-/* O overlay da mensagem (fora do map-wrap) */
 #messageOverlay {
   z-index: 60;
   position: fixed; /* Garante que sobreponha TUDO */
@@ -313,14 +309,6 @@ footer{
   line-height: 1.4;
   display: none; /* Escondido por padrão */
 }
-
-
-/* --- REMOÇÃO DOS ESTILOS ANTIGOS DO MODAL FINAL --- */
-/*
-.final-card, .final-heart-wrap, .final-title, .final-desc, .heart, .heart.pulse, @keyframes pulseNeon {
-  display: none;
-}
-*/
 
 .sr-announce {
   position: absolute;
