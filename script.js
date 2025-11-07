@@ -1,5 +1,5 @@
 (function() {
-  'use strict';
+  'use strict'; // <-- A CORREÇÃO ESTÁ AQUI
 
   const JourneyMap = {
     config: {
