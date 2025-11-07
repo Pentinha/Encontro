@@ -4,18 +4,19 @@
   const JourneyMap = {
     config: {
       duration: 3800, 
+      // Definimos as mensagens aqui para fácil acesso no novo container
       messages: [
-        { id: 'msg1', t: 0.12 },
-        { id: 'msg2', t: 0.36 },
-        { id: 'msg3', t: 0.63 },
-        { id: 'msg4', t: 0.86 },
+        { t: 0.12, text: 'Sua campanhia me alegra.' },
+        { t: 0.36, text: 'Mal posso esperar para ver o seu sorriso de perto' },
+        { t: 0.63, text: 'Quero criar nossas primeiras memórias logo.' },
+        { t: 0.86, text: 'Sinto que este é o início de tudo o que eu sempre quis' },
       ],
       stops: [
         { t: 0 },
-        { t: 0.12, msgId: 'msg1' },
-        { t: 0.36, msgId: 'msg2' },
-        { t: 0.63, msgId: 'msg3' },
-        { t: 0.86, msgId: 'msg4' },
+        { t: 0.12, msgIndex: 0 }, // Referência ao índice no array de messages
+        { t: 0.36, msgIndex: 1 },
+        { t: 0.63, msgIndex: 2 },
+        { t: 0.86, msgIndex: 3 },
         { t: 1 }
       ],
       particleCount: 18,
@@ -58,12 +59,9 @@
       this.dom.bubbleDesc = document.getElementById('bubbleDesc');
       this.dom.hint = document.getElementById('hint');
       this.dom.footer = document.querySelector('footer');
-      
-      this.config.messages = this.config.messages.map(msg => ({
-        ...msg,
-        el: document.getElementById(msg.id),
-        shown: false,
-      }));
+      // Novos elementos para o container de mensagens
+      this.dom.messageContainer = document.getElementById('messageContainer');
+      this.dom.currentMessageText = document.getElementById('currentMessageText');
     },
 
     bindEvents() {
@@ -82,7 +80,7 @@
         clearTimeout(this.state.resizeTimer);
         this.state.resizeTimer = setTimeout(() => {
           this.preparePath();
-          this.positionMessages();
+          // Não precisa mais posicionar as mensagens no mapa
         }, this.config.resizeDebounce);
       });
     },
@@ -91,7 +89,7 @@
       this.preparePath();
       this.render(0);
       this.updateUIForStop(0);
-      setTimeout(() => this.positionMessages(), 80);
+      // Não precisa mais posicionar as mensagens no mapa
     },
 
     preparePath() {
@@ -104,33 +102,16 @@
       return this.dom.path.getPointAtLength(Math.max(0, Math.min(L, t * L)));
     },
 
-    positionMessages() {
-      if (!this.dom.svg || !this.dom.mapWrap) return;
-      const svgCTM = this.dom.svg.getScreenCTM();
-      const containerRect = this.dom.mapWrap.getBoundingClientRect();
-      if (!svgCTM) return;
-
-      this.config.messages.forEach(m => {
-        const p = this.pointAt(m.t);
-        
-        const screenX = svgCTM.a * p.x + svgCTM.e;
-        const screenY = svgCTM.d * p.y + svgCTM.f;
-
-        const localX = screenX - containerRect.left;
-        const localY = screenY - containerRect.top;
-        const clampX = Math.max(8, Math.min(containerRect.width - 8, localX));
-        const clampY = Math.max(8, Math.min(containerRect.height - 8, localY));
-
-        m.el.style.left = `${clampX}px`;
-        m.el.style.top = `${clampY}px`;
-      });
-    },
+    // Removemos a função positionMessages() pois as mensagens não ficam mais no mapa.
 
     advanceToNextStop() {
       if (this.state.playing) return;
       if (this.state.currentStop >= this.config.stops.length - 1) {
         return;
       }
+
+      // Esconde a mensagem anterior antes de avançar
+      this.hideCurrentMessage();
 
       const t0 = this.config.stops[this.state.currentStop].t;
       this.state.currentStop++;
@@ -156,14 +137,14 @@
         const progress = Math.min(1, elapsed / duration);
         const currentT = t0 + (t1 - t0) * progress;
 
-        this.render(currentT); // Apenas renderiza o ponto
+        this.render(currentT);
 
         if (progress < 1) {
           this.state.animFrame = requestAnimationFrame(tick);
         } else {
           this.state.playing = false;
           this.render(t1);
-          this.showCurrentMessage(); // Mostra a mensagem no final
+          this.showCurrentMessage(); // Mostra a mensagem no final do segmento
           if (t1 === 1) {
             this.revealFinal();
           }
@@ -173,11 +154,6 @@
     },
 
     render(t) {
-      // *** INÍCIO DA CORREÇÃO ***
-      // Esta função agora SÓ renderiza o ponto e o caminho.
-      // A lógica de mostrar/esconder mensagens foi removida daqui
-      // para evitar o conflito que você viu.
-      
       const p = this.pointAt(t);
       this.dom.dot.setAttribute('cx', p.x);
       this.dom.dot.setAttribute('cy', p.y);
@@ -189,28 +165,23 @@
 
       const scale = 1 + Math.sin(t * Math.PI * 2) * 0.06;
       this.dom.dot.style.transform = `translate(-50%,-50%) scale(${scale})`;
-      // *** FIM DA CORREÇÃO ***
     },
     
     showCurrentMessage() {
-      // Esta função agora tem controle TOTAL e exclusivo
       const currentStopConfig = this.config.stops[this.state.currentStop];
-      const currentMsgId = currentStopConfig ? currentStopConfig.msgId : null;
-      
-      this.config.messages.forEach(msgConfig => {
-        if (msgConfig.id === currentMsgId) {
-          if (!msgConfig.shown) {
-            msgConfig.el.classList.add('show');
-            msgConfig.shown = true;
-            this.announce(msgConfig.el.textContent);
-          }
-        } 
-        else {
-          // Ela ativamente esconde todas as outras
-          msgConfig.el.classList.remove('show');
-          msgConfig.shown = false;
-        }
-      });
+      if (currentStopConfig && typeof currentStopConfig.msgIndex === 'number') {
+        const msgText = this.config.messages[currentStopConfig.msgIndex].text;
+        this.dom.currentMessageText.textContent = msgText;
+        this.dom.messageContainer.classList.add('show');
+        this.announce(msgText); // Anuncia para leitores de tela
+      } else {
+        this.hideCurrentMessage(); // Garante que esteja escondido se não houver mensagem
+      }
+    },
+
+    hideCurrentMessage() {
+      this.dom.messageContainer.classList.remove('show');
+      this.dom.currentMessageText.textContent = ''; // Limpa o texto
     },
 
     reset() {
@@ -221,10 +192,7 @@
       this.preparePath();
       this.render(0);
 
-      this.config.messages.forEach(m => {
-        m.el.classList.remove('show');
-        m.shown = false;
-      });
+      this.hideCurrentMessage(); // Esconde o container de mensagens
       this.dom.overlay.classList.remove('show');
       this.dom.overlay.setAttribute('aria-hidden', 'true');
       this.dom.finalHeart.classList.remove('pulse');
