@@ -390,12 +390,21 @@ footer{
     margin-top: 0.625rem;
   }
   
-  /* --- AJUSTES DO MODAL FINAL PARA CELULAR --- */
+  /* --- INÍCIO DAS CORREÇÕES --- */
   .final-card {
     padding: 1.25rem 1rem;
-    width: calc(100% - 2rem);
+    width: 90%;
+    max-width: calc(100% - 2rem);
     box-sizing: border-box;
   }
+  
+  /* Regra específica para forçar o .cta DENTRO do .final-card a empilhar */
+  .final-card .cta {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  /* --- FIM DAS CORREÇÕES --- */
+
   .final-heart-wrap {
     font-size: 2.5rem;
   }
@@ -406,7 +415,6 @@ footer{
     font-size: 0.875rem;
     margin-bottom: 0.75rem;
   }
-  /* ------------------------------------------- */
 
   .along-msg {
      font-size: 0.75rem;
