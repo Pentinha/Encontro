@@ -1,289 +1,284 @@
-(function(){
-  const svg = document.getElementById('scene');
-  const path = document.getElementById('track');
-  const highlight = document.getElementById('highlight');
-  const dot = document.getElementById('dot');
-  const glint = document.getElementById('glint');
-  const overlay = document.getElementById('overlay');
-  const finalHeart = document.getElementById('finalHeart');
-  const startBtn = document.getElementById('startBtn');
-  const resetBtn = document.getElementById('resetBtn');
-  const btnOk = document.getElementById('btnOk');
-  const btnHide = document.getElementById('btnHide');
-  const mapWrap = document.getElementById('mapWrap');
+(function() {
+  'use strict';
 
-  const messages = [
-    { el: document.getElementById('msg1'), t: 0.12 },
-    { el: document.getElementById('msg2'), t: 0.36 },
-    { el: document.getElementById('msg3'), t: 0.63 },
-    { el: document.getElementById('msg4'), t: 0.86 },
-  ];
+  const JourneyMap = {
+    config: {
+      duration: 3800,
+      messages: [
+        { id: 'msg1', t: 0.12 },
+        { id: 'msg2', t: 0.36 },
+        { id: 'msg3', t: 0.63 },
+        { id: 'msg4', t: 0.86 },
+      ],
+      particleCount: 18,
+      resizeDebounce: 150,
+    },
 
-  function preparePath(){
-    const L = path.getTotalLength();
-    highlight.style.strokeDasharray = `${0} ${L+10}`;
-  }
-  preparePath();
-  window.addEventListener('resize', preparePath);
+    dom: {},
+    state: {
+      pathLength: 0,
+      animFrame: null,
+      startTime: null,
+      playing: false,
+      resizeTimer: null,
+    },
 
-  function pointAt(t){
-    const L = path.getTotalLength();
-    const p = path.getPointAtLength(Math.max(0, Math.min(L, t * L)));
-    return p;
-  }
+    init() {
+      if (!document.getElementById('scene')) return;
+      
+      this.cacheDom();
+      this.bindEvents();
+      this.prepareScene();
+    },
 
-  function positionMessages(){
-    if(!svg || !mapWrap) return;
-    const svgCTM = svg.getScreenCTM();
-    const containerRect = mapWrap.getBoundingClientRect();
+    cacheDom() {
+      this.dom.svg = document.getElementById('scene');
+      this.dom.path = document.getElementById('track');
+      this.dom.highlight = document.getElementById('highlight');
+      this.dom.dot = document.getElementById('dot');
+      this.dom.glint = document.getElementById('glint');
+      this.dom.overlay = document.getElementById('overlay');
+      this.dom.finalHeart = document.getElementById('finalHeart');
+      this.dom.startBtn = document.getElementById('startBtn');
+      this.dom.resetBtn = document.getElementById('resetBtn');
+      this.dom.btnOk = document.getElementById('btnOk');
+      this.dom.btnHide = document.getElementById('btnHide');
+      this.dom.mapWrap = document.getElementById('mapWrap');
+      this.dom.dialogTitle = document.getElementById('dialogTitle');
+      this.dom.announce = document.querySelector('.sr-announce');
+      
+      this.config.messages = this.config.messages.map(msg => ({
+        ...msg,
+        el: document.getElementById(msg.id),
+        shown: false,
+      }));
+    },
 
-    messages.forEach(m=>{
-      const p = pointAt(m.t);
+    bindEvents() {
+      this.dom.startBtn.addEventListener('click', () => {
+        this.reset();
+        setTimeout(() => this.animate(0, 1, this.config.duration), 60);
+      });
 
-      let screenX = 0, screenY = 0;
-      if(svgCTM){
-        screenX = svgCTM.a * p.x + svgCTM.e;
-        screenY = svgCTM.d * p.y + svgCTM.f;
-      } else {
-        const svgRect = svg.getBoundingClientRect();
-        const vb = svg.viewBox.baseVal;
-        const scaleX = svgRect.width / vb.width;
-        const scaleY = svgRect.height / vb.height;
-        screenX = svgRect.left + p.x * scaleX;
-        screenY = svgRect.top + p.y * scaleY;
-      }
+      this.dom.resetBtn.addEventListener('click', () => this.reset());
+      this.dom.btnOk.addEventListener('click', () => this.hideFinal());
+      this.dom.btnHide.addEventListener('click', () => this.hideFinal(true));
 
-      const localX = screenX - containerRect.left;
-      const localY = screenY - containerRect.top;
-      const clampX = Math.max(8, Math.min(containerRect.width - 8, localX));
-      const clampY = Math.max(8, Math.min(containerRect.height - 8, localY));
+      this.dom.svg.addEventListener('click', (e) => this.handleClickOnMap(e));
 
-      m.el.style.left = clampX + 'px';
-      m.el.style.top = clampY + 'px';
-    });
-  }
+      window.addEventListener('resize', () => {
+        clearTimeout(this.state.resizeTimer);
+        this.state.resizeTimer = setTimeout(() => {
+          this.preparePath();
+          this.positionMessages();
+        }, this.config.resizeDebounce);
+      });
+    },
 
-  positionMessages();
-  window.addEventListener('resize', positionMessages);
-  window.addEventListener('scroll', positionMessages);
+    prepareScene() {
+      this.preparePath();
+      this.render(0);
+      setTimeout(() => this.positionMessages(), 80);
+    },
 
-  let anim = null;
-  let duration = 3800; 
-  let startTime = null;
-  let playing = false;
+    preparePath() {
+      this.state.pathLength = this.dom.path.getTotalLength();
+      this.dom.highlight.style.strokeDasharray = `0 ${this.state.pathLength + 10}`;
+    },
 
-  function animateStart(from = 0){
-    if(playing) return;
-    const L = path.getTotalLength();
-    const highlightLen = L;
-    startTime = performance.now();
-    playing = true;
+    pointAt(t) {
+      const L = this.state.pathLength;
+      return this.dom.path.getPointAtLength(Math.max(0, Math.min(L, t * L)));
+    },
 
-    function tick(now){
-      if(!playing) return;
-      const elapsed = now - startTime;
-      const t = Math.min(1, elapsed / duration); 
-      const p = path.getPointAtLength(t * L);
-      dot.setAttribute('cx', p.x);
-      dot.setAttribute('cy', p.y);
-      glint.setAttribute('cx', p.x - 4);
-      glint.setAttribute('cy', p.y - 4);
+    positionMessages() {
+      if (!this.dom.svg || !this.dom.mapWrap) return;
+      const svgCTM = this.dom.svg.getScreenCTM();
+      const containerRect = this.dom.mapWrap.getBoundingClientRect();
+      if (!svgCTM) return;
 
-      const reveal = t * highlightLen;
-      highlight.style.strokeDasharray = `${reveal} ${highlightLen - reveal}`;
+      this.config.messages.forEach(m => {
+        const p = this.pointAt(m.t);
+        
+        const screenX = svgCTM.a * p.x + svgCTM.e;
+        const screenY = svgCTM.d * p.y + svgCTM.f;
 
-      messages.forEach(m=>{
-        if(t >= m.t - 0.05){ 
+        const localX = screenX - containerRect.left;
+        const localY = screenY - containerRect.top;
+        const clampX = Math.max(8, Math.min(containerRect.width - 8, localX));
+        const clampY = Math.max(8, Math.min(containerRect.height - 8, localY));
+
+        m.el.style.left = `${clampX}px`;
+        m.el.style.top = `${clampY}px`;
+      });
+    },
+
+    animate(t0, t1, duration) {
+      if (this.state.playing) return;
+      
+      this.state.playing = true;
+      this.state.startTime = null;
+
+      const tick = (now) => {
+        if (!this.state.playing) return;
+        if (!this.state.startTime) this.state.startTime = now;
+
+        const elapsed = now - this.state.startTime;
+        const progress = Math.min(1, elapsed / duration);
+        const currentT = t0 + (t1 - t0) * progress;
+
+        this.render(currentT);
+
+        if (progress < 1) {
+          this.state.animFrame = requestAnimationFrame(tick);
+        } else {
+          this.state.playing = false;
+          this.revealFinal();
+        }
+      };
+      this.state.animFrame = requestAnimationFrame(tick);
+    },
+
+    render(t) {
+      const p = this.pointAt(t);
+      this.dom.dot.setAttribute('cx', p.x);
+      this.dom.dot.setAttribute('cy', p.y);
+      this.dom.glint.setAttribute('cx', p.x - 4);
+      this.dom.glint.setAttribute('cy', p.y - 4);
+
+      const reveal = t * this.state.pathLength;
+      this.dom.highlight.style.strokeDasharray = `${reveal} ${this.state.pathLength - reveal}`;
+
+      this.config.messages.forEach(m => {
+        if (t >= m.t - 0.05 && !m.shown) {
           m.el.classList.add('show');
+          m.shown = true;
+          this.announce(m.el.textContent);
         }
       });
 
       const scale = 1 + Math.sin(t * Math.PI * 2) * 0.06;
-      dot.style.transform = `translate(-50%,-50%) scale(${scale})`;
+      this.dom.dot.style.transform = `translate(-50%,-50%) scale(${scale})`;
+    },
 
-      if(t < 1){
-        if((now - startTime) % 200 < 16) positionMessages();
-        anim = requestAnimationFrame(tick);
-      } else {
-        playing = false;
-        positionMessages();
-        revealFinal();
-      }
-    }
-    anim = requestAnimationFrame(tick);
-  }
+    reset() {
+      if (this.state.animFrame) cancelAnimationFrame(this.state.animFrame);
+      this.state.playing = false;
 
-  function revealFinal(){
-    overlay.classList.add('show');
-    overlay.setAttribute('aria-hidden', 'false');
-    finalHeart.classList.add('pulse');
-    burstParticles();
-  }
+      this.preparePath();
+      this.render(0);
 
-  function resetAll(){
-    if(anim) cancelAnimationFrame(anim);
-    playing = false;
-
-    preparePath();
-    const p0 = path.getPointAtLength(0);
-    dot.setAttribute('cx', p0.x);
-    dot.setAttribute('cy', p0.y);
-    glint.setAttribute('cx', p0.x - 4);
-    glint.setAttribute('cy', p0.y - 4);
-
-    messages.forEach(m=> m.el.classList.remove('show'));
-    overlay.classList.remove('show');
-    overlay.setAttribute('aria-hidden', 'true');
-    finalHeart.classList.remove('pulse');
-    positionMessages();
-  }
-
-  function burstParticles(){
-    const count = 18;
-    const svgPoint = { x: 910, y: 200 };
-    
-    if(!svg || !mapWrap) return;
-    
-    const svgCTM = svg.getScreenCTM();
-    const containerRect = mapWrap.getBoundingClientRect();
-    
-    let screenX = 0, screenY = 0;
-    if(svgCTM){
-      screenX = svgCTM.a * svgPoint.x + svgCTM.e;
-      screenY = svgCTM.d * svgPoint.y + svgCTM.f;
-    } else {
-      const svgRect = svg.getBoundingClientRect();
-      const vb = svg.viewBox.baseVal;
-      const scaleX = svgRect.width / vb.width;
-      const scaleY = svgRect.height / vb.height;
-      screenX = svgRect.left + svgPoint.x * scaleX;
-      screenY = svgRect.top + svgPoint.y * scaleY;
-    }
-
-    const heartPos = {
-      x: screenX - containerRect.left,
-      y: screenY - containerRect.top
-    };
-
-    for(let i=0;i<count;i++){
-      const el = document.createElement('div');
-      el.className = 'petal';
-      el.innerHTML = '';
-      el.style.width = el.style.height = `${8 + Math.random()*14}px`;
-      el.style.left = `${heartPos.x + (Math.random()*60-30)}px`;
-      el.style.top = `${heartPos.y + (Math.random()*40-20)}px`;
-      el.style.opacity = 0.9;
-      el.style.borderRadius = '50%';
-      el.style.background = `radial-gradient(circle at 30% 30%, #fff, rgba(255,150,190,0.9) 28%, rgba(255,120,160,0.9) 88%)`;
-      el.style.position = 'absolute';
-      el.style.pointerEvents = 'none';
-      el.style.transform = `translate(-50%,-50%)`;
-      el.style.zIndex = 40;
-      mapWrap.appendChild(el);
-
-      const ang = (Math.PI*2) * Math.random();
-      const dist = 60 + Math.random()*120;
-      const dx = Math.cos(ang) * dist;
-      const dy = Math.sin(ang) * dist - 20;
-      el.animate([
-        { transform: `translate(-50%,-50%) translate(0px,0px) scale(1)`, opacity:1 },
-        { transform: `translate(-50%,-50%) translate(${dx}px, ${dy}px) scale(0.6)`, opacity:0.05 }
-      ], {
-        duration: 900 + Math.random()*700,
-        easing: 'cubic-bezier(.2,.9,.25,1)'
-      }).onfinish = ()=> el.remove();
-    }
-  }
-
-  startBtn.addEventListener('click', ()=> {
-    resetAll();
-    setTimeout(()=> animateStart(0), 60);
-  });
-
-  resetBtn.addEventListener('click', ()=> resetAll());
-
-  svg.addEventListener('click', (e)=>{
-    if(playing) return;
-    resetAll();
-    const pt = svg.createSVGPoint();
-    pt.x = e.clientX; pt.y = e.clientY;
-    const loc = pt.matrixTransform(svg.getScreenCTM().inverse());
-    const L = path.getTotalLength();
-    let best = 0, bestd=Infinity;
-    const samples = 120;
-    for(let i=0;i<=samples;i++){
-      const p = path.getPointAtLength((i/samples) * L);
-      const dx = p.x - loc.x, dy = p.y - loc.y;
-      const d = dx*dx + dy*dy;
-      if(d < bestd){ bestd = d; best = i/samples; }
-    }
-    const startP = pointAt(best);
-    dot.setAttribute('cx', startP.x);
-    dot.setAttribute('cy', startP.y);
-    glint.setAttribute('cx', startP.x - 4);
-    glint.setAttribute('cy', startP.y - 4);
-
-    const remainingFrac = 1 - best;
-    const customDuration = Math.max(1000, duration * remainingFrac);
-    animateFromFraction(best, customDuration);
-  });
-
-  function animateFromFraction(fracStart, customDuration){
-    if(playing) return;
-    const L = path.getTotalLength();
-    const highlightLen = L;
-    startTime = performance.now();
-    playing = true;
-    const t0 = fracStart;
-    const dur = customDuration;
-
-    function tick(now){
-      if(!playing) return;
-      const elapsed = now - startTime;
-      const progress = Math.min(1, elapsed / dur); 
-      const t = t0 + (1 - t0) * progress;
-      const p = path.getPointAtLength(t * L);
-      dot.setAttribute('cx', p.x);
-      dot.setAttribute('cy', p.y);
-      glint.setAttribute('cx', p.x - 4);
-      glint.setAttribute('cy', p.y - 4);
-
-      const reveal = t * highlightLen;
-      highlight.style.strokeDasharray = `${reveal} ${highlightLen - reveal}`;
-
-      messages.forEach(m=>{
-        if(t >= m.t - 0.05){ m.el.classList.add('show'); }
+      this.config.messages.forEach(m => {
+        m.el.classList.remove('show');
+        m.shown = false;
       });
+      this.dom.overlay.classList.remove('show');
+      this.dom.overlay.setAttribute('aria-hidden', 'true');
+      this.dom.finalHeart.classList.remove('pulse');
+      this.announce('');
+    },
 
-      const scale = 1 + Math.sin(progress * Math.PI * 2) * 0.06;
-      dot.style.transform = `translate(-50%,-50%) scale(${scale})`;
+    revealFinal() {
+      this.dom.overlay.classList.add('show');
+      this.dom.overlay.setAttribute('aria-hidden', 'false');
+      this.dom.finalHeart.classList.add('pulse');
+      this.burstParticles();
+      this.announce(this.dom.dialogTitle.textContent);
+    },
 
-      if(progress < 1){
-        if((now - startTime) % 200 < 16) positionMessages();
-        anim = requestAnimationFrame(tick);
+    hideFinal(immediate = false) {
+      this.dom.finalHeart.classList.remove('pulse');
+      if (!immediate) {
+        this.dom.finalHeart.style.transform = 'scale(1.05)';
+        setTimeout(() => {
+          this.dom.overlay.classList.remove('show');
+          this.dom.overlay.setAttribute('aria-hidden', 'true');
+          this.dom.finalHeart.style.transform = 'scale(1)';
+        }, 600);
       } else {
-        playing = false;
-        positionMessages();
-        revealFinal();
+        this.dom.overlay.classList.remove('show');
+        this.dom.overlay.setAttribute('aria-hidden', 'true');
       }
-    }
-    anim = requestAnimationFrame(tick);
-  }
+    },
+    
+    handleClickOnMap(e) {
+      if (this.state.playing) return;
+      this.reset();
 
-  btnOk.addEventListener('click', ()=> {
-    finalHeart.classList.remove('pulse');
-    finalHeart.style.transform = 'scale(1.05)';
-    setTimeout(()=> overlay.classList.remove('show'), 600);
-  });
-  btnHide.addEventListener('click', ()=> overlay.classList.remove('show'));
+      const pt = this.dom.svg.createSVGPoint();
+      pt.x = e.clientX;
+      pt.y = e.clientY;
+      const loc = pt.matrixTransform(this.dom.svg.getScreenCTM().inverse());
+      const L = this.state.pathLength;
 
-  (function init(){
-    const p0 = path.getPointAtLength(0);
-    dot.setAttribute('cx', p0.x);
-    dot.setAttribute('cy', p0.y);
-    glint.setAttribute('cx', p0.x - 4);
-    glint.setAttribute('cy', p0.y - 4);
-    setTimeout(positionMessages, 80);
-  })();
+      let bestT = 0, bestDist = Infinity;
+      const samples = 120;
+      for (let i = 0; i <= samples; i++) {
+        const t = i / samples;
+        const p = this.dom.path.getPointAtLength(t * L);
+        const dx = p.x - loc.x, dy = p.y - loc.y;
+        const d = dx * dx + dy * dy;
+        if (d < bestDist) {
+          bestDist = d;
+          bestT = t;
+        }
+      }
+      
+      this.render(bestT);
+
+      const remainingFrac = 1 - bestT;
+      const customDuration = Math.max(1000, this.config.duration * remainingFrac);
+      this.animate(bestT, 1, customDuration);
+    },
+
+    burstParticles() {
+      const svgPoint = { x: 910, y: 200 };
+      const svgCTM = this.dom.svg.getScreenCTM();
+      const containerRect = this.dom.mapWrap.getBoundingClientRect();
+      if (!svgCTM) return;
+
+      const screenX = svgCTM.a * svgPoint.x + svgCTM.e;
+      const screenY = svgCTM.d * svgPoint.y + svgCTM.f;
+      const heartPos = {
+        x: screenX - containerRect.left,
+        y: screenY - containerRect.top
+      };
+
+      for (let i = 0; i < this.config.particleCount; i++) {
+        const el = document.createElement('div');
+        el.className = 'petal';
+        el.style.width = el.style.height = `${8 + Math.random() * 14}px`;
+        el.style.left = `${heartPos.x + (Math.random() * 60 - 30)}px`;
+        el.style.top = `${heartPos.y + (Math.random() * 40 - 20)}px`;
+        el.style.background = `radial-gradient(circle at 30% 30%, #fff, rgba(255,150,190,0.9) 28%, rgba(255,120,160,0.9) 88%)`;
+        el.style.position = 'absolute';
+        el.style.pointerEvents = 'none';
+        el.style.transform = `translate(-50%,-50%)`;
+        el.style.zIndex = 40;
+        this.dom.mapWrap.appendChild(el);
+
+        const ang = (Math.PI * 2) * Math.random();
+        const dist = 60 + Math.random() * 120;
+        const dx = Math.cos(ang) * dist;
+        const dy = Math.sin(ang) * dist - 20;
+
+        el.animate([
+          { transform: `translate(-50%,-50%) translate(0px,0px) scale(1)`, opacity: 1 },
+          { transform: `translate(-50%,-50%) translate(${dx}px, ${dy}px) scale(0.6)`, opacity: 0.05 }
+        ], {
+          duration: 900 + Math.random() * 700,
+          easing: 'cubic-bezier(.2,.9,.25,1)'
+        }).onfinish = () => el.remove();
+      }
+    },
+    
+    announce(text) {
+      if (this.dom.announce) {
+        this.dom.announce.textContent = text;
+      }
+    },
+  };
+
+  document.addEventListener('DOMContentLoaded', () => JourneyMap.init());
 
 })();
