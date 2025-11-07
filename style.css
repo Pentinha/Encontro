@@ -389,11 +389,25 @@ footer{
   footer {
     margin-top: 0.625rem;
   }
+  
+  /* --- AJUSTES DO MODAL FINAL PARA CELULAR --- */
   .final-card {
-    padding: 1.25rem;
-    width: calc(100% - 1rem);
+    padding: 1.25rem 1rem;
+    width: calc(100% - 2rem);
     box-sizing: border-box;
   }
+  .final-heart-wrap {
+    font-size: 2.5rem;
+  }
+  .final-title {
+    font-size: 1rem;
+  }
+  .final-desc {
+    font-size: 0.875rem;
+    margin-bottom: 0.75rem;
+  }
+  /* ------------------------------------------- */
+
   .along-msg {
      font-size: 0.75rem;
      padding: 0.375rem 0.5rem;
