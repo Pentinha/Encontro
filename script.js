@@ -5,7 +5,7 @@
     config: {
       duration: 3800, 
       messages: [
-        { title: 'Sua campanhia me alegra.', sub: null },
+        { title: 'Sua companhia me alegra.', sub: null },
         { title: 'Mal posso esperar para ver o seu sorriso de perto', sub: null },
         { title: 'Quero criar nossas primeiras memórias logo.', sub: null },
         { title: 'Sinto que este é o início de tudo o que eu sempre quis', sub: null },
@@ -282,3 +282,4 @@
   document.addEventListener('DOMContentLoaded', () => JourneyMap.init());
 
 })();
+
